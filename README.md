@@ -2,7 +2,8 @@
 
 
 Some analysis of the latest Stats19 data released in September 2025 for
-the period 2020 to 2024.
+the period 2020 to 2024. Use the script data.R to reproduce plots and
+tables, saved in plots folder.
 
 # Casualties by country
 
