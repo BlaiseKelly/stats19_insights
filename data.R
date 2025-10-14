@@ -412,14 +412,14 @@ ggsave(paste0("plots/country_KSI_",fn, "_", ur,".png"))
 
 # casualties by country and year for writing out
 country_table <- cas_L5Y |>
-  filter(collision_year >= base_year & casualty_type %in% c_types) |>
+  filter(collision_year >= base_year) |>
   group_by(collision_index, collision_year) |>
   summarise(Fatal = sum(fatal_count),
             Serious = sum(casualty_adjusted_severity_serious,na.rm = TRUE),
             Slight = sum(casualty_adjusted_severity_slight,na.rm = TRUE)) |> 
   inner_join(cc_filled) |>
   #filter(casualty_type == "Pedestrian") |>
-  filter(urban_or_rural_area == "Urban") |>
+  #filter(urban_or_rural_area == "Urban") |>
   group_by(collision_year,country) |>
   summarise(Fatal = round(sum(Fatal)),
             Serious = round(sum(Serious,na.rm = TRUE)),
