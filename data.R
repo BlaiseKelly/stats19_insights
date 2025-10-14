@@ -1,4 +1,4 @@
-
+# this script downloads the STATS19 data from the DfT and creates some tables and plots
 
 library(sf)
 library(mapview)
@@ -10,18 +10,24 @@ library(ggplot2)
 library(readODS)
 library(cols4all)
 library(gt)
+library(waffle)
 
+# create directory for the plots
 dir.create("plots/")
 
+# get collision data
 cra_L5Y <- get_stats19("5 years", type = "collision")
 
+# get casualty data
 cas_L5Y <- get_stats19("5 years", type = "casualty") |>
   mutate(fatal_count = if_else(casualty_severity == "Fatal", 1, 0))
 
+# get vehicle data
 veh_L5Y <- get_stats19("5 years", type = "vehicle") |>
   mutate(vehicle_type = if_else(escooter_flag == "Vehicle was an e-scooter", "e-scooter", vehicle_type))
 
 # HGVs
+# summarise the casualty data to one row per collision to reduce double counting errors
 cas_summary <- cas_L5Y |>
   #filter(collision_year == 2023) |>
   select(collision_index, casualty_type, fatal_count, casualty_adjusted_severity_serious, casualty_adjusted_severity_slight) |>
@@ -30,14 +36,15 @@ cas_summary <- cas_L5Y |>
             Serious = sum(casualty_adjusted_severity_serious,na.rm = TRUE),
             Slight = sum(casualty_adjusted_severity_slight,na.rm = TRUE))
 
+# trim the data frame to just the columns needed
 cra_mway <- select(cra_L5Y, collision_year, collision_index, first_road_class, speed_limit)
 
-
+# calculate casualties from HGVs
 goods_mway <- veh_L5Y |>
   select(collision_index, vehicle_type) |>
   group_by(collision_index, vehicle_type) |>
   #filter(grepl("Goods", vehicle_type)) |> 
-  filter(vehicle_type %in% c("Goods over 3.5t. and under 7.5t", "Goods 7.5 tonnes mgw and over")) |> 
+  filter(vehicle_type %in% c("Goods over 3.5t. and under 7.5t", "Goods 7.5 tonnes mgw and over")) |> # HGV definition
   mutate(number_vehicles = 1) |>
   summarise(number_vehicles = sum(number_vehicles)) |>
   tidyr::pivot_wider(names_from = "vehicle_type", values_from = "number_vehicles") |> 
@@ -51,11 +58,12 @@ goods_mway <- veh_L5Y |>
             Slight = sum(Slight))|> 
   mutate(veh_class = "HGV (over 3.5t)")
 
+# calculate casualties from none HGVs
 not_goods_mway <- veh_L5Y |>
   select(collision_index, vehicle_type) |>
   group_by(collision_index, vehicle_type) |>
   #filter(!grepl("Goods", vehicle_type)) |> 
-  filter(!vehicle_type %in% c("Goods over 3.5t. and under 7.5t", "Goods 7.5 tonnes mgw and over")) |> 
+  filter(!vehicle_type %in% c("Goods over 3.5t. and under 7.5t", "Goods 7.5 tonnes mgw and over")) |> # NOT HGV
   mutate(number_vehicles = 1) |>
   summarise(number_vehicles = sum(number_vehicles)) |>
   tidyr::pivot_wider(names_from = "vehicle_type", values_from = "number_vehicles") |> 
@@ -69,8 +77,7 @@ not_goods_mway <- veh_L5Y |>
             Slight = sum(Slight)) |> 
   mutate(veh_class = "not HGV")
 
-
-
+# create folder for data
 dir.create("data/")
 
 #download vehicle miles by road
@@ -90,6 +97,7 @@ veh_miles <- read_ods("data/(TRA41) Strategic road network traffic/tra4105-miles
   filter(Vehicle == "Heavy Goods Vehicles") |> 
   select(Year, Vehicle, veh_pc)
 
+# combine to one table for HGVs and Not
 mway_veh <- rbind(goods_mway, not_goods_mway) |> 
   group_by(collision_year) |> 
   mutate(Fatal_tot = sum(Fatal),
@@ -100,6 +108,7 @@ mway_veh <- rbind(goods_mway, not_goods_mway) |>
   left_join(veh_miles, by = c("collision_year" = "Year")) |> 
   filter(veh_class == "HGV (over 3.5t)") 
 
+# create table to be plotted by chart 0
 chart_0 <- mway_veh |> 
   select(year = collision_year, '% of Fatalities' = Fat_pc, '% of vehicle miles' = veh_pc) |> 
   melt("year")
@@ -110,6 +119,7 @@ cust_theme <- theme(panel.grid.major = element_line(size = 2))
 # put the elements in a list
 chart_theme <- list(cust_theme, scale_color_manual(values = cols))
 
+# plot chart
 chart_0 %>%
   ggplot(aes(year, value, color = variable)) +
   geom_line(size = 2, alpha = 1) +
@@ -126,11 +136,12 @@ chart_0 %>%
   labs(caption = "Source: Stats19")+
   theme(panel.border = element_blank())
 
+# save to plots folder
 ggsave(paste0("plots/hgvs_mway.png"))
 
 
 # pavements
-
+# summarise casualties to one row per collision to avoid double counting
 cas_summary_all <- cas_L5Y |>
   filter(collision_year == 2024) |>
   select(collision_index, casualty_type, pedestrian_location, fatal_count, casualty_adjusted_severity_serious, casualty_adjusted_severity_slight) |>
@@ -140,7 +151,7 @@ cas_summary_all <- cas_L5Y |>
             Serious = sum(casualty_adjusted_severity_serious,na.rm = TRUE),
             Slight = sum(casualty_adjusted_severity_slight,na.rm = TRUE)) 
 
-
+# create table showing breakdown of pedestrian location
 cas_ped_loc_tot <- cas_summary_all |>
   ungroup() |>
   group_by(pedestrian_location) |> 
@@ -153,6 +164,7 @@ cas_ped_loc_tot <- cas_summary_all |>
   mutate(pc_KSI = round(KSI/sum(KSI)*100,1)) |> 
   arrange(desc(pc_KSI))
 
+# table 0
 t0 <- gt(cas_ped_loc_tot,auto_align = TRUE) |> 
   cols_width(pedestrian_location ~px(300)) |> 
   cols_label(pedestrian_location = md("**Pedestrian Location**"),
@@ -185,9 +197,10 @@ t0 <- gt(cas_ped_loc_tot,auto_align = TRUE) |>
     locations = cells_body(columns = everything())
   )
 
+# save table as a png
 gtsave(t0, "plots/ped_location_table.png")
 
-
+# summarise casualties again
 cas_summary <- cas_L5Y |>
   filter(collision_year == 2024) |>
   select(collision_index, casualty_type, pedestrian_location, fatal_count, casualty_adjusted_severity_serious, casualty_adjusted_severity_slight) |>
@@ -198,6 +211,7 @@ cas_summary <- cas_L5Y |>
             Slight = sum(casualty_adjusted_severity_slight,na.rm = TRUE)) 
 
 
+# summary of pavement casualties for the entire period
 cas_pave_tot <- cas_summary |>
   ungroup() |>
   summarise(Fatal = sum(Fatal),
@@ -221,6 +235,7 @@ cas_cra_veh <- cas_summary |>
   inner_join(cra_sum_L5Y) |>
   inner_join(veh_summary)
 
+# pedestriains pavement single vehicle collisions
 one_car <- cas_cra_veh |>
   filter(number_of_vehicles == 1) |> 
   select(-number_of_vehicles) |> 
@@ -231,6 +246,7 @@ one_car <- cas_cra_veh |>
             Serious = sum(Serious),
             Slight = sum(Slight))
 
+# collisions with more than one vehicle totals
 more_cars_tot <- cas_cra_veh |>
   filter(!number_of_vehicles == 1) |> 
   #group_by(vehicle_type) |>
@@ -238,6 +254,7 @@ more_cars_tot <- cas_cra_veh |>
             Serious = sum(Serious),
             Slight = sum(Slight))
 
+# breakdown of >1 vehicles by vehicle type, pretty sure no double counting is here
 more_cars_veh <- cas_cra_veh |>
   filter(!number_of_vehicles == 1) |>
   select(-number_of_vehicles) |> 
@@ -249,8 +266,6 @@ more_cars_veh <- cas_cra_veh |>
             Slight = round(sum(Slight))) |> 
   mutate(pc_fat = round(Fatal/sum(Fatal)*100,1))
 
-library(waffle)
-
 Fat_pav <- one_car |> 
   filter(Fatal > 0) |> 
   select(vehicle_type, Fatal)
@@ -261,30 +276,21 @@ KSI_pav <- one_car |>
   filter(KSI > 0) |> 
   select(vehicle_type, KSI)
 
-## define row number
-rn <- 20
-tot <- sum(zt_mort[rn,c(4:10)])
-pc <- zt_mort[rn,1]
-t <- zt_mort[rn,2]
-time_spent <- c('0-30'= zt_mort[rn,4], '30-60'=zt_mort[rn,5], '1-2'=zt_mort[rn,6], '2-4'=zt_mort[rn,7], 
-                '4-8'=zt_mort[rn,8], '8-16'=zt_mort[rn,9], '16+' = zt_mort[rn,10])
+# get enough colours for the variables
+colz <- c4a("poly.sky24", n = NROW(Fat_pav))
 
-colz <- cols4all::c4a("poly.sky24", n = NROW(Fat_pav))
-
+# create waffle plot
 waffle(Fat_pav, rows = 3, colors = colz,legend_pos = "bottom", title = paste0("Pavement fatalities in 2024 by driver vehicle type"))
 
+# write out with ggplot2
 ggsave("plots/fatal_pave.png")
 
-colz <- cols4all::c4a("poly.sky24", n = NROW(KSI_pav))
+# same again for KSI
+colz <- c4a("poly.sky24", n = NROW(KSI_pav))
 
 waffle(KSI_pav, rows = 25, colors = colz, title = paste0("KSI casualties on pavements by driver vehicle type"))
 
 ggsave("plots/KSI_pave.png")
-
-
-
-### HGVs
-
 
 ### England, Wales, Scotland
 # import country boundaries
@@ -334,6 +340,7 @@ urb_rural <- c("Urban", "Rural")
 
 casualties <- c("Pedestrians & Cyclists", "all casualties")
 
+# loop through for all casualties and pedestrians and urban and rural areas to plot
 for (c in casualties){
   
   if(c == "Pedestrians & Cyclists"){
@@ -364,16 +371,19 @@ cc <- cas_L5Y |>
   select(collision_year, country, KSI) |>
   tidyr::pivot_wider(names_from = "country", values_from = "KSI")
 
-
+# baseline values for index plot
 bm_vals <- cc |> filter(collision_year == base_year)
 
+# calaute table of indexes
 rates <- cc %>%
   mutate(England = England/bm_vals$England*100,
          Scotland = Scotland/bm_vals$Scotland*100,
          Wales = Wales/bm_vals$Wales*100)
 
+# prep for plot
 chart_1 <- rates |> melt("collision_year")
 
+# plot
 chart_1 %>%
   ggplot(aes(collision_year, value, color = variable)) +
   geom_line(size = 2, alpha = .8) +
@@ -400,6 +410,7 @@ ggsave(paste0("plots/country_KSI_",fn, "_", ur,".png"))
   
 }
 
+# casualties by country and year for writing out
 country_table <- cas_L5Y |>
   filter(collision_year >= base_year & casualty_type %in% c_types) |>
   group_by(collision_index, collision_year) |>
@@ -417,8 +428,10 @@ country_table <- cas_L5Y |>
   rowwise() |>
   mutate(KSI = sum(c(Fatal, Serious)))
 
+# difference 
 diff_2022_2024 <- round(country_table[country_table$country == "Wales",]$KSI[3]-country_table[country_table$country == "Wales",]$KSI[5])
 
+# country table
 t1 <- gt(country_table,auto_align = TRUE) |> 
   cols_width(collision_year ~px(60)) |> 
   cols_label(collision_year = md("**Year**"),
