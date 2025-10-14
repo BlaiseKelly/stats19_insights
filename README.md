@@ -25,8 +25,8 @@ is even more pronounced.
 
 # Pedestrians on pavements
 
-Table shows the breakdown of pedestrian casualties by position. Nearly
-12% of casualties KSI were on pavements or verges.
+The table below shows the breakdown of pedestrian casualties by
+position. Nearly 12% of casualties KSI were on pavements or verges.
 
 ![](plots/ped_location_table.png)
 
