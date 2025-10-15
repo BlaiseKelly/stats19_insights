@@ -280,7 +280,7 @@ KSI_pav <- one_car |>
 colz <- c4a("poly.sky24", n = NROW(Fat_pav))
 
 # create waffle plot
-waffle(Fat_pav, rows = 3, colors = colz,legend_pos = "bottom", title = paste0("Pavement fatalities in 2024 by driver vehicle type"))
+waffle(Fat_pav, rows = 3, colors = colz,legend_pos = "bottom", title = paste0("Single vehicle Pavement fatalities in 2024 by driver vehicle type"))
 
 # write out with ggplot2
 ggsave("plots/fatal_pave.png")
@@ -288,7 +288,7 @@ ggsave("plots/fatal_pave.png")
 # same again for KSI
 colz <- c4a("poly.sky24", n = NROW(KSI_pav))
 
-waffle(KSI_pav, rows = 25, colors = colz, title = paste0("KSI casualties on pavements by driver vehicle type"))
+waffle(KSI_pav, rows = 25, colors = colz, title = paste0("Singe vehicle KSI casualties on pavements by driver vehicle type"))
 
 ggsave("plots/KSI_pave.png")
 
@@ -466,6 +466,49 @@ t1 <- gt(country_table,auto_align = TRUE) |>
 
 gtsave(t1, "plots/country_table.png")
 
+# casualties by country and year for writing out
+country_table_urban <- cas_L5Y |>
+  filter(collision_year >= base_year) |>
+  group_by(collision_index, collision_year) |>
+  summarise(Fatal = sum(fatal_count),
+            Serious = sum(casualty_adjusted_severity_serious,na.rm = TRUE),
+            Slight = sum(casualty_adjusted_severity_slight,na.rm = TRUE)) |> 
+  inner_join(cc_filled) |>
+  #filter(casualty_type == "Pedestrian") |>
+  filter(urban_or_rural_area == "Urban") |>
+  group_by(collision_year,country) |>
+  summarise(Fatal = round(sum(Fatal)),
+            Serious = round(sum(Serious,na.rm = TRUE)),
+            Slight = round(sum(Slight,na.rm = TRUE))) |> 
+  ungroup() |>
+  rowwise() |>
+  mutate(KSI = sum(c(Fatal, Serious)))
+
+# difference 
+diff_2022_2024_urb <- ((country_table_urban[country_table_urban$country == "Wales",]$KSI[3]-country_table_urban[country_table_urban$country == "Wales",]$KSI[5])/country_table_urban[country_table_urban$country == "Wales",]$KSI[3])*100
+
+
+
+# casualties by country and year for writing out
+country_table_urb_ped_cy <- cas_L5Y |>
+  filter(collision_year >= base_year & casualty_type %in% c("Pedestrian", "Cyclist")) |>
+  group_by(collision_index, collision_year) |>
+  summarise(Fatal = sum(fatal_count),
+            Serious = sum(casualty_adjusted_severity_serious,na.rm = TRUE),
+            Slight = sum(casualty_adjusted_severity_slight,na.rm = TRUE)) |> 
+  inner_join(cc_filled) |>
+  #filter(casualty_type == "Pedestrian") |>
+  filter(urban_or_rural_area == "Urban") |>
+  group_by(collision_year,country) |>
+  summarise(Fatal = round(sum(Fatal)),
+            Serious = round(sum(Serious,na.rm = TRUE)),
+            Slight = round(sum(Slight,na.rm = TRUE))) |> 
+  ungroup() |>
+  rowwise() |>
+  mutate(KSI = sum(c(Fatal, Serious)))
+
+# difference 
+diff_2022_2024_urb <- ((country_table_urb_ped_cy[country_table_urb_ped_cy$country == "Wales",]$KSI[3]-country_table_urb_ped_cy[country_table_urb_ped_cy$country == "Wales",]$KSI[5])/country_table_urb_ped_cy[country_table_urb_ped_cy$country == "Wales",]$KSI[3])*100
 # trips and CAs
 
 #   # get trip data NTS0303 https://www.gov.uk/government/statistical-data-sets/nts03-modal-comparisons
