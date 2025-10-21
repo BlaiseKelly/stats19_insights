@@ -1,0 +1,30 @@
+---
+title: "Map Dashboard"
+page-layout: full
+format:
+  html:
+    theme: cosmo
+    css: site-style.css
+---
+
+# Interactive Map Dashboard
+
+::: {.row}
+::: {.column width="50%"}
+<iframe src="maps/map1.html" class="mapframe"></iframe>
+:::
+
+::: {.column width="50%"}
+<iframe src="maps/map2.html" class="mapframe"></iframe>
+:::
+:::
+
+::: {.row}
+::: {.column width="50%"}
+<iframe src="maps/map3.html" class="mapframe"></iframe>
+:::
+
+::: {.column width="50%"}
+<iframe src="maps/map4.html" class="mapframe"></iframe>
+:::
+:::
