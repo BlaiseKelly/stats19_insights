@@ -9,22 +9,17 @@ format:
 
 # Interactive Map Dashboard
 
-::: {.row}
-::: {.column width="50%"}
-<iframe src="maps/map1.html" class="mapframe"></iframe>
-:::
+<select id="mapSelector" onchange="showMap(this.value)" style="margin: 1rem; font-size: 1rem;">
+  <option value="map1">Map 1 — Air Quality</option>
+  <option value="map2">Map 2 — Energy Use</option>
+  <option value="map3">Map 3 — Population Density</option>
+  <option value="map4">Map 4 — Transport</option>
+</select>
 
-::: {.column width="50%"}
-<iframe src="maps/map2.html" class="mapframe"></iframe>
-:::
-:::
+<iframe id="mapFrame" src="maps/map1.html" class="mapframe"></iframe>
 
-::: {.row}
-::: {.column width="50%"}
-<iframe src="maps/map3.html" class="mapframe"></iframe>
-:::
-
-::: {.column width="50%"}
-<iframe src="maps/map4.html" class="mapframe"></iframe>
-:::
-:::
+<script>
+function showMap(mapName) {
+  document.getElementById("mapFrame").src = "maps/" + mapName + ".html";
+}
+</script>

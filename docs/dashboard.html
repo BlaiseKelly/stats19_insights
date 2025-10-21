@@ -136,26 +136,14 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="interactive-map-dashboard" class="level1">
 <h1>Interactive Map Dashboard</h1>
-<div class="row">
-<div class="column" style="width:50%;">
-<iframe src="maps/map1.html" class="mapframe">
+<p><select id="mapSelector" onchange="showMap(this.value)" style="margin: 1rem; font-size: 1rem;"> <option value="map1">Map 1 — Air Quality</option> <option value="map2">Map 2 — Energy Use</option> <option value="map3">Map 3 — Population Density</option> <option value="map4">Map 4 — Transport</option> </select></p>
+<iframe id="mapFrame" src="maps/map1.html" class="mapframe">
 </iframe>
-</div>
-<div class="column" style="width:50%;">
-<iframe src="maps/map2.html" class="mapframe">
-</iframe>
-</div>
-</div>
-<div class="row">
-<div class="column" style="width:50%;">
-<iframe src="maps/map3.html" class="mapframe">
-</iframe>
-</div>
-<div class="column" style="width:50%;">
-<iframe src="maps/map4.html" class="mapframe">
-</iframe>
-</div>
-</div>
+<script>
+function showMap(mapName) {
+  document.getElementById("mapFrame").src = "maps/" + mapName + ".html";
+}
+</script>
 
 
 </section>
