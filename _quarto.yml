@@ -1,0 +1,23 @@
+project:
+  type: website
+  output-dir: docs
+  resources:
+    - maps/*.html
+
+website:
+  title: "My Map Dashboard"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+      - href: dashboard.qmd
+        text: Dashboard
+
+format:
+  html:
+    theme: cosmo
+    css: site-style.css
+
+
+
+
